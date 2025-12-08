@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Нумерология Бот</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+            background-color: var(--tg-theme-bg-color, #fff);
+            color: var(--tg-theme-text-color, #000);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+        }
+        input {
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 10px;
+            border: 1px solid #ccc;
+            font-size: 16px;
+        }
+        button {
+            width: 100%;
+            padding: 15px;
+            background-color: var(--tg-theme-button-color, #3390ec);
+            color: var(--tg-theme-button-text-color, #fff);
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Узнай свою судьбу</h2>
+    <p>Введите дату рождения:</p>
+    
+    <input type="text" id="name" placeholder="Ваше имя">
+    <input type="date" id="birthdate">
+    <br>
+    <button onclick="sendData()">Рассчитать</button>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Раскрыть на весь экран
+
+        // ВСТАВЬ СЮДА СВОЙ ВЕБХУК ОТ N8N
+        const WEBHOOK_URL = "https://твоя-ссылка-на-n8n/webhook-test/numerology"; 
+
+        function sendData() {
+            const name = document.getElementById("name").value;
+            const date = document.getElementById("birthdate").value;
+
+            if (!date || !name) {
+                tg.showAlert("Заполните все поля!");
+                return;
+            }
+
+            // Данные для отправки
+            const data = {
+                tg_id: tg.initDataUnsafe?.user?.id || "test_user_id", // Берем ID юзера из Телеграм
+                name: name,
+                birth_date: date
+            };
+
+            // Кнопка меняет текст, чтобы было понятно
+            const btn = document.querySelector('button');
+            btn.innerText = "Считаем...";
+            
+            // Шлем в N8N
+            fetch(WEBHOOK_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            })
+            .then(response => {
+                tg.showAlert("Готово! Ответ придет в чат.");
+                tg.close(); // Закрываем окно
+            })
+            .catch(error => {
+                tg.showAlert("Ошибка соединения с космосом...");
+                console.error(error);
+                btn.innerText = "Попробовать снова";
+            });
+        }
+    </script>
+</body>
+</html>
