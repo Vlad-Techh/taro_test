@@ -1,95 +1,69 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Нумерология Бот</title>
-    <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <style>
-        body {
-            font-family: sans-serif;
-            background-color: var(--tg-theme-bg-color, #fff);
-            color: var(--tg-theme-text-color, #000);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: 20px;
-        }
-        input {
-            width: 100%;
-            padding: 15px;
-            margin: 10px 0;
-            border-radius: 10px;
-            border: 1px solid #ccc;
-            font-size: 16px;
-        }
-        button {
-            width: 100%;
-            padding: 15px;
-            background-color: var(--tg-theme-button-color, #3390ec);
-            color: var(--tg-theme-button-text-color, #fff);
-            border: none;
-            border-radius: 10px;
-            font-size: 16px;
-            font-weight: bold;
-            cursor: pointer;
-        }
-    </style>
-</head>
 <body>
+    <h2>Мистический Бот</h2>
 
-    <h2>Узнай свою судьбу</h2>
-    <p>Введите дату рождения:</p>
-    
-    <input type="text" id="name" placeholder="Ваше имя">
-    <input type="date" id="birthdate">
-    <br>
-    <button onclick="sendData()">Рассчитать</button>
+    <div style="margin-bottom: 20px;">
+        <label>
+            <input type="radio" name="mode" value="numerology" checked onchange="toggleFields()"> Нумерология
+        </label>
+        <label>
+            <input type="radio" name="mode" value="tarot" onchange="toggleFields()"> Таро (Вопрос)
+        </label>
+    </div>
+
+    <div id="numerology-fields">
+        <input type="text" id="name" placeholder="Ваше имя">
+        <input type="date" id="birthdate">
+    </div>
+
+    <div id="tarot-fields" style="display:none;">
+        <textarea id="question" rows="4" placeholder="Напишите ваш вопрос..." style="width:100%; border-radius:10px; padding:10px;"></textarea>
+    </div>
+
+    <button onclick="sendData()">Получить ответ</button>
 
     <script>
         let tg = window.Telegram.WebApp;
-        tg.expand(); // Раскрыть на весь экран
+        tg.expand();
+        
+        // ВСТАВЬ СЮДА СВОЙ ВЕБХУК
+        const WEBHOOK_URL = "ТВОЙ_ССЫЛКА_НА_N8N"; 
 
-        // ВСТАВЬ СЮДА СВОЙ ВЕБХУК ОТ N8N
-        const WEBHOOK_URL = "https://vladtech-n8n.ru/webhook-test/numerology"; 
+        function toggleFields() {
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            document.getElementById('numerology-fields').style.display = mode === 'numerology' ? 'block' : 'none';
+            document.getElementById('tarot-fields').style.display = mode === 'tarot' ? 'block' : 'none';
+        }
 
         function sendData() {
-            const name = document.getElementById("name").value;
-            const date = document.getElementById("birthdate").value;
-
-            if (!date || !name) {
-                tg.showAlert("Заполните все поля!");
-                return;
-            }
-
-            // Данные для отправки
-            const data = {
-                tg_id: tg.initDataUnsafe?.user?.id || "test_user_id", // Берем ID юзера из Телеграм
-                name: name,
-                birth_date: date
+            const mode = document.querySelector('input[name="mode"]:checked').value;
+            let data = {
+                tg_id: tg.initDataUnsafe?.user?.id || "test_id",
+                mode: mode
             };
 
-            // Кнопка меняет текст, чтобы было понятно
+            if (mode === 'numerology') {
+                data.name = document.getElementById("name").value;
+                data.birth_date = document.getElementById("birthdate").value;
+                if (!data.birth_date) return tg.showAlert("Введите дату!");
+            } else {
+                data.question = document.getElementById("question").value;
+                if (!data.question) return tg.showAlert("Напишите вопрос!");
+            }
+
             const btn = document.querySelector('button');
-            btn.innerText = "Считаем...";
-            
-            // Шлем в N8N
+            btn.innerText = "Магия происходит...";
+
             fetch(WEBHOOK_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             })
-            .then(response => {
-                tg.showAlert("Готово! Ответ придет в чат.");
-                tg.close(); // Закрываем окно
+            .then(res => {
+                tg.close();
             })
-            .catch(error => {
-                tg.showAlert("Ошибка соединения с космосом...");
-                console.error(error);
-                btn.innerText = "Попробовать снова";
+            .catch(err => {
+                btn.innerText = "Ошибка";
             });
         }
     </script>
 </body>
-
-</html>
