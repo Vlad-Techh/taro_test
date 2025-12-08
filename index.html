@@ -1,293 +1,18 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-    <meta charset="UTF-8" />
-    <title>Мистический Бот</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-
-    <style>
-        :root {
-            --bg: #0f1014;
-            --card: #181a22;
-            --accent: #8b5cff;
-            --accent-soft: rgba(139, 92, 255, 0.15);
-            --accent-hover: #a68bff;
-            --text: #f7f7ff;
-            --text-muted: #b3b3c7;
-            --error: #ff5c7a;
-            --radius-lg: 18px;
-            --radius-full: 999px;
-        }
-
-        * {
-            box-sizing: border-box;
-        }
-
-        body {
-            margin: 0;
-            padding: 0;
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
-            sans-serif;
-            background: radial-gradient(circle at top, #22263a, #05060a 55%);
-            color: var(--text);
-        }
-
-        .app {
-            max-width: 480px;
-            margin: 0 auto;
-            min-height: 100vh;
-            padding: 20px 16px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
-        }
-
-        .card {
-            background: linear-gradient(145deg, #151726, #11131d);
-            border-radius: 24px;
-            padding: 20px 18px 22px;
-            box-shadow:
-                    0 18px 45px rgba(0, 0, 0, 0.6),
-                    0 0 0 1px rgba(255, 255, 255, 0.02);
-        }
-
-        h2 {
-            margin: 0 0 4px;
-            font-size: 22px;
-            letter-spacing: 0.03em;
-        }
-
-        .subtitle {
-            margin: 0;
-            font-size: 13px;
-            color: var(--text-muted);
-        }
-
-        /* Переключатель режимов */
-        .mode-switch {
-            display: flex;
-            gap: 8px;
-            margin-top: 18px;
-            background: #111320;
-            padding: 4px;
-            border-radius: var(--radius-full);
-        }
-
-        .mode-option {
-            flex: 1;
-        }
-
-        .mode-option input {
-            display: none;
-        }
-
-        .mode-label {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 6px;
-            width: 100%;
-            padding: 8px 10px;
-            border-radius: var(--radius-full);
-            font-size: 13px;
-            color: var(--text-muted);
-            cursor: pointer;
-            transition: all 0.15s ease-out;
-        }
-
-        .mode-label span.icon {
-            font-size: 16px;
-        }
-
-        .mode-option input:checked + .mode-label {
-            background: var(--accent-soft);
-            color: var(--text);
-            box-shadow: 0 0 0 1px rgba(139, 92, 255, 0.6);
-        }
-
-        /* Формы */
-        .fields {
-            margin-top: 16px;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .field-label {
-            font-size: 12px;
-            color: var(--text-muted);
-            margin-bottom: 4px;
-        }
-
-        .input,
-        textarea {
-            width: 100%;
-            border-radius: var(--radius-lg);
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            background: rgba(5, 6, 12, 0.8);
-            color: var(--text);
-            padding: 10px 12px;
-            font-size: 14px;
-            outline: none;
-            transition: border-color 0.12s ease, box-shadow 0.12s ease,
-            background 0.12s ease;
-        }
-
-        .input::placeholder,
-        textarea::placeholder {
-            color: rgba(179, 179, 199, 0.7);
-        }
-
-        .input:focus,
-        textarea:focus {
-            border-color: rgba(139, 92, 255, 0.9);
-            box-shadow: 0 0 0 1px rgba(139, 92, 255, 0.7);
-            background: rgba(7, 9, 18, 0.98);
-        }
-
-        textarea {
-            min-height: 110px;
-            resize: none;
-            border-radius: 16px;
-        }
-
-        /* Кнопка */
-        .actions {
-            margin-top: 16px;
-        }
-
-        #submit-btn {
-            width: 100%;
-            border: none;
-            border-radius: var(--radius-full);
-            padding: 13px 18px;
-            font-size: 15px;
-            font-weight: 600;
-            letter-spacing: 0.02em;
-            cursor: pointer;
-            background: linear-gradient(135deg, #8b5cff, #ff7ad9);
-            color: #fff;
-            box-shadow: 0 14px 30px rgba(139, 92, 255, 0.45);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 8px;
-            transition: transform 0.1s ease-out, box-shadow 0.1s ease-out,
-            filter 0.1s ease-out;
-        }
-
-        #submit-btn span.loader {
-            display: none;
-            width: 14px;
-            height: 14px;
-            border-radius: 50%;
-            border: 2px solid rgba(255, 255, 255, 0.4);
-            border-top-color: #fff;
-            animation: spin 0.6s linear infinite;
-        }
-
-        #submit-btn.loading {
-            filter: brightness(1.02);
-            transform: translateY(1px) scale(0.99);
-            box-shadow: 0 10px 22px rgba(139, 92, 255, 0.3);
-            cursor: default;
-        }
-
-        #submit-btn.loading span.text {
-            opacity: 0.8;
-        }
-
-        #submit-btn.loading span.loader {
-            display: inline-block;
-        }
-
-        #submit-btn:active:not(.loading) {
-            transform: translateY(2px) scale(0.985);
-            box-shadow: 0 8px 18px rgba(139, 92, 255, 0.3);
-        }
-
-        /* Сообщения об ошибке (локально) */
-        .error-text {
-            margin-top: 6px;
-            font-size: 12px;
-            color: var(--error);
-        }
-
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-    </style>
-</head>
-<body>
-<div class="app">
-    <div class="card">
-        <h2>Мистический Бот</h2>
-        <p class="subtitle">Персональные нумерологические расчёты и ответы карт Таро</p>
-
-        <div class="mode-switch">
-            <label class="mode-option">
-                <input type="radio" name="mode" value="numerology" checked />
-                <div class="mode-label">
-                    <span class="icon">✨</span>
-                    <span>Нумерология</span>
-                </div>
-            </label>
-
-            <label class="mode-option">
-                <input type="radio" name="mode" value="tarot" />
-                <div class="mode-label">
-                    <span class="icon">🃏</span>
-                    <span>Таро</span>
-                </div>
-            </label>
-        </div>
-
-        <!-- Нумерология -->
-        <div id="numerology-fields" class="fields">
-            <div>
-                <div class="field-label">Имя</div>
-                <input type="text" id="name" class="input" placeholder="Например, Влад" />
-            </div>
-
-            <div>
-                <div class="field-label">Дата рождения</div>
-                <input type="date" id="birthdate" class="input" />
-            </div>
-        </div>
-
-        <!-- Таро -->
-        <div id="tarot-fields" class="fields" style="display: none;">
-            <div>
-                <div class="field-label">Ваш вопрос</div>
-                <textarea id="question" placeholder="Напишите ваш вопрос к картам..."></textarea>
-            </div>
-        </div>
-
-        <div id="error-box" class="error-text" style="display:none;"></div>
-
-        <div class="actions">
-            <button id="submit-btn" type="button">
-                <span class="loader"></span>
-                <span class="text">Получить ответ</span>
-            </button>
-        </div>
-    </div>
-</div>
-
 <script>
     // ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP
     const tg = window.Telegram ? window.Telegram.WebApp : null;
     if (tg) {
         tg.expand();
         tg.ready();
+        console.log("Telegram WebApp initDataUnsafe:", tg.initDataUnsafe);
+    } else {
+        console.log("Telegram WebApp не доступен (открыто не через мини-апп)");
     }
 
-    // ВАЖНО: замени URL на боевой, если используешь n8n
+    // ВАЖНО: твой URL вебхука
     // Для постоянной работы: /webhook/... а не /webhook-test/...
     const WEBHOOK_URL = "https://vladtech-n8n.ru/webhook-test/numerology";
-    // const WEBHOOK_URL = "https://vladtech-n8n.ru/webhook-test/numerology"; // только для тестового запуска в n8n
+    // const WEBHOOK_URL = "https://vladtech-n8n.ru/webhook/numerology"; // боевой вариант
 
     const numerologyBlock = document.getElementById("numerology-fields");
     const tarotBlock = document.getElementById("tarot-fields");
@@ -331,12 +56,31 @@
         clearError();
     }
 
+    function getTelegramUserId() {
+        // Пытаемся достать user.id из WebApp-контекста
+        const userId = tg?.initDataUnsafe?.user?.id;
+
+        if (!userId) {
+            console.error("Не удалось получить Telegram user.id из initDataUnsafe:", tg?.initDataUnsafe);
+            showError("Не удалось получить ваш Telegram ID. Откройте мини-приложение через бота, а не как обычную ссылку.");
+            return null;
+        }
+
+        return userId;
+    }
+
     function sendData() {
         clearError();
         const mode = document.querySelector('input[name="mode"]:checked').value;
 
+        const userId = getTelegramUserId();
+        if (!userId) {
+            // Если ID нет — не отправляем запрос
+            return;
+        }
+
         const data = {
-            tg_id: tg?.initDataUnsafe?.user?.id || "test_id",
+            tg_id: userId,   // ВСЕГДА реальный Telegram ID
             mode: mode
         };
 
@@ -397,5 +141,3 @@
         submitBtn.addEventListener("click", sendData);
     });
 </script>
-</body>
-</html>
