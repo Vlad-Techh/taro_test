@@ -386,10 +386,48 @@
     }
 
     function showResult(payload) {
-        console.log("Payload from backend:", payload);
+    console.log("Payload from backend:", payload);
 
-        const mode = payload.mode || null;
+    const mode = payload.mode || null;
 
+    // --- ТАРО ---
+    if (mode === "tarot") {
+        const cardName = payload.card_name || payload.title || "Карта Таро";
+        const isReversed = !!payload.card_reversed;
+
+        // Заголовок: "Рыцарь Мечей (перевёрнутая)" или просто "Рыцарь Мечей"
+        const titleText = isReversed
+            ? `${cardName} (перевёрнутая)`
+            : cardName;
+
+        resultTitle.textContent = titleText;
+
+        // Подзаголовок – фиксированный текст
+        resultSubtitle.textContent = "Ответ Таро на ваш вопрос";
+        resultSubtitle.style.display = "block";
+
+        // Числа нумерологии нам тут не нужны
+        resultNumbers.textContent = "";
+        resultNumbers.style.display = "none";
+
+        // Картинка карты
+        if (payload.card_image_url) {
+            tarotImage.src = payload.card_image_url;
+            tarotCardName.textContent = cardName; // подпись без "(перевёрнутая)"
+            tarotCard.style.display = "flex";
+        } else {
+            tarotCard.style.display = "none";
+            tarotImage.src = "";
+            tarotCardName.textContent = "";
+        }
+
+        // Текст трактовки
+        resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
+    }
+
+    // --- НУМЕРОЛОГИЯ ---
+    else {
+        // Заголовок, как раньше
         resultTitle.textContent = payload.title || "Ваш результат готов ✨";
 
         if (payload.subtitle) {
@@ -400,7 +438,7 @@
             resultSubtitle.style.display = "none";
         }
 
-        // Нумерологические числа, если есть
+        // Показываем числа, если есть
         const parts = [];
         if (payload.life_path_number != null) {
             parts.push(`Число жизненного пути: ${payload.life_path_number}`);
@@ -419,22 +457,18 @@
             resultNumbers.style.display = "none";
         }
 
-        // Карта Таро, если пришла
-        if (mode === "tarot" && payload.card_image_url) {
-            tarotImage.src = payload.card_image_url;
-            tarotCardName.textContent = payload.card_name || "";
-            tarotCard.style.display = "flex";
-        } else {
-            tarotCard.style.display = "none";
-            tarotImage.src = "";
-            tarotCardName.textContent = "";
-        }
+        // Для нумерологии карту не показываем
+        tarotCard.style.display = "none";
+        tarotImage.src = "";
+        tarotCardName.textContent = "";
 
         resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
-
-        resultCard.style.display = "block";
-        requestAnimationFrame(() => resultCard.classList.add("visible"));
     }
+
+    // Плавное появление карточки
+    resultCard.style.display = "block";
+    requestAnimationFrame(() => resultCard.classList.add("visible"));
+}
 
     function setLoading(state) {
         if (state) {
@@ -540,3 +574,4 @@
 </script>
 </body>
 </html>
+
