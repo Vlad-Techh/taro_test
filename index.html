@@ -340,204 +340,145 @@
 </div>
 
 <script>
-    // ИНИЦИАЛИЗАЦИЯ TELEGRAM WEBAPP
-    const tg = window.Telegram ? window.Telegram.WebApp : null;
-    if (tg) {
-        tg.expand();
-        tg.ready();
-    }
-
-    // Твой вебхук
+    // --- НАСТРОЙКИ ---
     const WEBHOOK_URL = "https://vladtech-n8n.ru/webhook/numerology";
+    
+    // Инициализация Telegram
+    const tg = window.Telegram ? window.Telegram.WebApp : null;
+    if (tg) { tg.expand(); tg.ready(); }
 
-    // Элементы интерфейса
+    // Элементы DOM
     const numerologyBlock = document.getElementById("numerology-fields");
     const tarotBlock = document.getElementById("tarot-fields");
+    const resultCard = document.getElementById("result-card");
     const submitBtn = document.getElementById("submit-btn");
     const errorBox = document.getElementById("error-box");
-
-    const resultCard = document.getElementById("result-card");
-    const resultTitle = document.getElementById("result-title");
-    const resultSubtitle = document.getElementById("result-subtitle");
-    const resultNumbers = document.getElementById("result-numbers");
-    const resultText = document.getElementById("result-text");
-
-    const tarotCard = document.getElementById("tarot-card");
-    const tarotImage = document.getElementById("tarot-image");
-    const tarotCardName = document.getElementById("tarot-card-name");
+    
+    // Элементы результата
+    const elTitle = document.getElementById("result-title");
+    const elSubtitle = document.getElementById("result-subtitle");
+    const elNumbers = document.getElementById("result-numbers");
+    const elText = document.getElementById("result-text");
+    const elTarotCard = document.getElementById("tarot-card");
+    const elTarotImg = document.getElementById("tarot-image");
+    const elTarotName = document.getElementById("tarot-card-name");
 
     // --- ФУНКЦИИ ---
 
     function showError(msg) {
-        if (tg && tg.showAlert) tg.showAlert(msg); else alert(msg);
         errorBox.textContent = msg;
         errorBox.style.display = "block";
+        if(tg) tg.HapticFeedback.notificationOccurred('error');
     }
 
-    function clearError() {
-        errorBox.textContent = "";
+    function resetUI() {
         errorBox.style.display = "none";
-    }
-
-    function clearResult() {
-        resultCard.classList.remove("visible");
         resultCard.style.display = "none";
-        resultTitle.textContent = "";
-        resultSubtitle.textContent = "";
-        resultText.textContent = "";
-        resultNumbers.textContent = "";
-        resultNumbers.style.display = "none";
-        tarotCard.style.display = "none";
-        tarotImage.src = "";
-        tarotCardName.textContent = "";
-        // СБРОС КЛАССА ПЕРЕВОРОТА
-        tarotImage.classList.remove("reversed"); 
+        resultCard.classList.remove("visible");
+        
+        // Сброс картинки
+        elTarotImg.src = "";
+        elTarotImg.style.transform = "none"; 
+        elTarotCard.style.display = "none";
+        
+        elTitle.textContent = "";
+        elTarotName.textContent = "";
     }
 
-    function showResult(data) {
-        // 1. Нормализация данных (вытаскиваем из массива, если пришел массив)
+    function renderResult(data) {
+        // 1. Достаем данные (если это массив, берем первый элемент)
         const payload = Array.isArray(data) ? data[0] : data;
-
-        console.log("Данные для отображения:", payload); // Смотри в консоль браузера
-
         const mode = payload.mode || "numerology";
-
+        
         // === РЕЖИМ ТАРО ===
         if (mode === "tarot") {
-    // 1) Берём готовый заголовок с бэка
-    const titleFromBackend = payload.card_title || payload.title || "Карта Таро";
+            // А. Получаем имя карты
+            let baseName = payload.card_name || payload.title || "Карта Таро";
+            
+            // Б. ОЧИСТКА ДУБЛЕЙ (Лекарство от двойных надписей)
+            // Удаляем "(перевёрнутая)" и пробелы, если сервер их уже прислал
+            baseName = baseName.replace(/\(перевёрнутая\)/gi, "").trim();
 
-    // card_reversed может прийти как boolean или как строка, подстрахуемся
-    const isReversed =
-        payload.card_reversed === true ||
-        payload.card_reversed === "true";
+            // В. Проверяем, нужно ли перевернуть
+            // Понимает: true, "true", 1
+            const isReversed = payload.card_reversed === true || 
+                               payload.card_reversed === "true" || 
+                               payload.card_reversed === 1;
 
-    // Заголовок сверху по центру
-    resultTitle.textContent = titleFromBackend;
-    resultTitle.style.textAlign = "center";
+            // Г. Собираем финальное имя ОДИН РАЗ
+            const fullName = isReversed ? `${baseName} (перевёрнутая)` : baseName;
 
-    // Сабтайтл для Таро не нужен
-    resultSubtitle.textContent = "";
-    resultSubtitle.style.display = "none";
+            // Д. Выводим текст (Везде одинаковый!)
+            elTitle.textContent = fullName;      // Заголовок
+            elTarotName.textContent = fullName;  // Подпись снизу
 
-    // Нумерологические числа в режиме Таро не показываем
-    resultNumbers.textContent = "";
-    resultNumbers.style.display = "none";
+            // Е. Работаем с картинкой
+            if (payload.card_image_url) {
+                elTarotImg.src = payload.card_image_url;
+                elTarotCard.style.display = "flex";
 
-    // 2) Картинка и подпись под ней
-    if (payload.card_image_url) {
-        tarotCard.style.display = "flex";
-        tarotImage.src = payload.card_image_url;
+                // ЖЕСТКИЙ ПОВОРОТ
+                if (isReversed) {
+                    elTarotImg.style.transform = "rotate(180deg)";
+                } else {
+                    elTarotImg.style.transform = "none";
+                }
+            }
 
-        // подпись под картой — ТО ЖЕ САМОЕ, что заголовок
-        tarotCardName.textContent = titleFromBackend;
-
-        // ❗ ПРОСТОЙ ПОВОРОТ БЕЗ КЛАССОВ
-        if (isReversed) {
-            tarotImage.style.transform = "rotate(180deg)";
-        } else {
-            tarotImage.style.transform = "none";
-        }
-    } else {
-        tarotCard.style.display = "none";
-        tarotImage.src = "";
-        tarotCardName.textContent = "";
-        tarotImage.style.transform = "none";
-    }
-
-    // 3) Текст трактовки
-    resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
-}
+            // Прячем лишнее
+            elSubtitle.style.display = "none";
+            elNumbers.style.display = "none";
+            elText.textContent = payload.text || "";
+        } 
         
         // === РЕЖИМ НУМЕРОЛОГИИ ===
         else {
-            resultTitle.textContent = payload.title || "Результат";
+            elTitle.textContent = payload.title || "Результат";
+            elSubtitle.textContent = payload.subtitle || "";
+            elSubtitle.style.display = payload.subtitle ? "block" : "none";
             
-            if (payload.subtitle) {
-                resultSubtitle.textContent = payload.subtitle;
-                resultSubtitle.style.display = "block";
-            } else {
-                resultSubtitle.style.display = "none";
-            }
-
-            const parts = [];
-            if (payload.life_path_number != null) parts.push(`Число пути: ${payload.life_path_number}`);
-            if (payload.birthday_number != null) parts.push(`Число ДР: ${payload.birthday_number}`);
-            if (payload.personal_year != null) parts.push(`Личный год: ${payload.personal_year}`);
+            const nums = [];
+            if(payload.life_path_number) nums.push(`Путь: ${payload.life_path_number}`);
+            if(payload.birthday_number) nums.push(`ДР: ${payload.birthday_number}`);
+            if(payload.personal_year) nums.push(`Год: ${payload.personal_year}`);
             
-            if (parts.length) {
-                resultNumbers.textContent = parts.join(" • ");
-                resultNumbers.style.display = "block";
-            } else {
-                resultNumbers.style.display = "none";
-            }
-
-            tarotCard.style.display = "none";
-            resultText.textContent = payload.text || "";
+            elNumbers.textContent = nums.join(" • ");
+            elNumbers.style.display = nums.length ? "block" : "none";
+            
+            elText.textContent = payload.text || "";
+            elTarotCard.style.display = "none";
         }
 
-        // Показываем результат
+        // Показываем блок с анимацией
         resultCard.style.display = "block";
-        requestAnimationFrame(() => resultCard.classList.add("visible"));
-    }
-
-    function setLoading(state) {
-        if (state) {
-            submitBtn.classList.add("loading");
-            submitBtn.disabled = true;
-        } else {
-            submitBtn.classList.remove("loading");
-            submitBtn.disabled = false;
-        }
-    }
-
-    function toggleFields() {
-        const mode = document.querySelector('input[name="mode"]:checked').value;
-        if (mode === "numerology") {
-            numerologyBlock.style.display = "flex";
-            tarotBlock.style.display = "none";
-        } else {
-            numerologyBlock.style.display = "none";
-            tarotBlock.style.display = "flex";
-        }
-        clearError();
-        clearResult();
-    }
-
-    function getTelegramUserId() {
-        const userId = tg?.initDataUnsafe?.user?.id;
-        // Для тестов в браузере (если нет TG) раскомментируй строку ниже:
-        // return 123456789; 
-        if (!userId) {
-            showError("Откройте через Telegram.");
-            return null;
-        }
-        return userId;
+        setTimeout(() => resultCard.classList.add("visible"), 50);
+        if(tg) tg.HapticFeedback.notificationOccurred('success');
     }
 
     function sendData() {
-        clearError();
-        clearResult();
-
+        resetUI();
         const mode = document.querySelector('input[name="mode"]:checked').value;
-        const userId = getTelegramUserId();
-        if (!userId) return;
+        const userId = tg?.initDataUnsafe?.user?.id || 0; 
 
         const data = { tg_id: userId, mode };
 
         if (mode === "numerology") {
-            const name = document.getElementById("name").value.trim();
-            const birthDate = document.getElementById("birthdate").value;
-            if (!birthDate) return showError("Введите дату рождения.");
-            data.name = name || null;
-            data.birth_date = birthDate;
+            const date = document.getElementById("birthdate").value;
+            if(!date) return showError("Введите дату рождения");
+            data.birth_date = date;
+            data.name = document.getElementById("name").value;
         } else {
-            const question = document.getElementById("question").value.trim();
-            if (!question) return showError("Напишите вопрос.");
-            data.question = question;
+            const q = document.getElementById("question").value.trim();
+            if(!q) return showError("Напишите вопрос");
+            data.question = q;
         }
 
-        setLoading(true);
+        submitBtn.disabled = true;
+        submitBtn.classList.add("loading");
+        const btnTextSpan = submitBtn.querySelector(".text") || submitBtn; // поддержка разных версий верстки
+        const oldBtnText = btnTextSpan.textContent;
+        if(submitBtn.querySelector(".text")) submitBtn.querySelector(".text").textContent = "Думаю...";
+        else submitBtn.textContent = "Думаю...";
 
         fetch(WEBHOOK_URL, {
             method: "POST",
@@ -546,44 +487,45 @@
         })
         .then(async (res) => {
             let json = null;
-            try {
-                json = await res.json();
-            } catch (e) {
-                console.error("JSON Error:", e);
-            }
+            try { json = await res.json(); } catch(e) {}
 
-            if (!res.ok) {
-                showError("Ошибка сервера");
-                setLoading(false);
-                return;
+            if (!res.ok || !json) {
+                throw new Error("Ошибка сервера");
             }
-
-            // ВАЖНО: Передаем JSON в showResult как есть,
-            // сама функция showResult внутри разберется, массив это или объект.
-            if (json) {
-                showResult(json);
-            } else {
-                showError("Пришел пустой ответ");
-            }
-
-            setLoading(false);
+            renderResult(json);
         })
-        .catch((err) => {
+        .catch(err => {
             console.error(err);
-            showError("Ошибка соединения");
-            setLoading(false);
+            showError("Не удалось получить ответ");
+        })
+        .finally(() => {
+            submitBtn.disabled = false;
+            submitBtn.classList.remove("loading");
+            if(submitBtn.querySelector(".text")) submitBtn.querySelector(".text").textContent = "Получить ответ";
+            else submitBtn.textContent = "Получить ответ";
         });
     }
 
+    // Слушатели событий
     document.addEventListener("DOMContentLoaded", () => {
-        document.querySelectorAll('input[name="mode"]').forEach((el) => {
-            el.addEventListener("change", toggleFields);
+        document.querySelectorAll('input[name="mode"]').forEach(r => {
+            r.addEventListener("change", (e) => {
+                if (e.target.value === "numerology") {
+                    numerologyBlock.style.display = "flex";
+                    tarotBlock.style.display = "none";
+                } else {
+                    numerologyBlock.style.display = "none";
+                    tarotBlock.style.display = "flex";
+                }
+                resetUI();
+            });
         });
         submitBtn.addEventListener("click", sendData);
     });
 </script>
 </body>
 </html>
+
 
 
 
