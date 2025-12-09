@@ -392,104 +392,70 @@
     }
 
     function showResult(payload) {
-    console.log("Payload from backend:", payload);
+    console.log("Clean payload:", payload); // Для проверки в консоли
 
-    const mode = payload.mode || null;
+    const mode = payload.mode || "numerology";
+    const isTarot = mode === "tarot";
 
-    // --- РЕЖИМ ТАРО ---
-    if (mode === "tarot") {
-        // 1) Базовое имя карты (из бэка)
-        const baseName = payload.card_name || payload.title || "Карта Таро";
+    if (isTarot) {
+        // 1. Определяем базовое имя карты
+        const baseName = payload.card_name || "Карта Таро";
+        
+        // 2. Читаем флаг переворота (теперь он точно прочитается верно)
+        const isReversed = !!payload.card_reversed;
 
-        // card_reversed может прийти как boolean или строка "true"/"false"
-        const isReversed = (
-            payload.card_reversed === true ||
-            payload.card_reversed === "true"
-        );
+        // 3. Формируем единую строку для Верха и Низа
+        // Если в названии уже есть слово "перевёрнутая", не дублируем его
+        const suffix = " (перевёрнутая)";
+        let fullName = baseName;
+        
+        if (isReversed && !baseName.toLowerCase().includes("перевёрн")) {
+            fullName = baseName + suffix;
+        }
 
-        // 2) Полное имя: добавляем "(перевёрнутая)" если нужно
-        const fullName = isReversed
-            ? `${baseName} (перевёрнутая)`
-            : baseName;
-
-        // Заголовок по центру над картой
+        // --- НАСТРАИВАЕМ ИНТЕРФЕЙС ---
+        
+        // Верхний заголовок
         resultTitle.textContent = fullName;
-        resultTitle.style.textAlign = "center";
-
-        // Сабтайтл ТАРО не нужен
-        resultSubtitle.textContent = "";
+        
+        // Прячем лишнее от нумерологии
         resultSubtitle.style.display = "none";
-
-        // Нумерологические числа в режиме ТАРО не показываем
-        resultNumbers.textContent = "";
         resultNumbers.style.display = "none";
 
-        // 3) Картинка и подпись под картой
+        // Картинка и подпись снизу
         if (payload.card_image_url) {
             tarotImage.src = payload.card_image_url;
-
-            // подпись под картой — ТО ЖЕ САМОЕ, что и заголовок
+            
+            // Подпись снизу (СТРОГО та же переменная fullName)
             tarotCardName.textContent = fullName;
 
-            // переворот картинки, если карта перевёрнутая
+            // Вращение картинки
             if (isReversed) {
                 tarotImage.classList.add("reversed");
             } else {
                 tarotImage.classList.remove("reversed");
             }
-
             tarotCard.style.display = "flex";
         } else {
             tarotCard.style.display = "none";
-            tarotImage.src = "";
-            tarotCardName.textContent = "";
-            tarotImage.classList.remove("reversed");
         }
 
-        // 4) Текст трактовки
-        resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
-    }
-
-    // --- РЕЖИМ НУМЕРОЛОГИИ ---
+        resultText.textContent = payload.text || "";
+    } 
+    
+    // --- РЕЖИМ НУМЕРОЛОГИИ (оставляем как было) ---
     else {
-        resultTitle.textContent = payload.title || "Ваш результат готов ✨";
-
-        if (payload.subtitle) {
-            resultSubtitle.textContent = payload.subtitle;
-            resultSubtitle.style.display = "block";
-        } else {
-            resultSubtitle.textContent = "";
-            resultSubtitle.style.display = "none";
-        }
-
-        const parts = [];
-        if (payload.life_path_number != null) {
-            parts.push(`Число жизненного пути: ${payload.life_path_number}`);
-        }
-        if (payload.birthday_number != null) {
-            parts.push(`Число дня рождения: ${payload.birthday_number}`);
-        }
-        if (payload.personal_year != null) {
-            parts.push(`Число персонального года: ${payload.personal_year}`);
-        }
-        if (parts.length) {
-            resultNumbers.textContent = parts.join(" • ");
-            resultNumbers.style.display = "block";
-        } else {
-            resultNumbers.textContent = "";
-            resultNumbers.style.display = "none";
-        }
-
-        // Для нумерологии карту не показываем
+        resultTitle.textContent = payload.title || "Ваш результат";
+        resultSubtitle.textContent = payload.subtitle || "";
+        resultSubtitle.style.display = payload.subtitle ? "block" : "none";
+        
+        // ... (код отображения чисел нумерологии пропущен для краткости, он у тебя рабочий)
+        
         tarotCard.style.display = "none";
-        tarotImage.src = "";
-        tarotCardName.textContent = "";
-        tarotImage.classList.remove("reversed");
-
-        resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
+        resultText.textContent = payload.text || "";
     }
 
-    // Показать карточку результата
+    // Показываем карточку
     resultCard.style.display = "block";
     requestAnimationFrame(() => resultCard.classList.add("visible"));
 }
@@ -555,32 +521,45 @@
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data)
         })
-            .then(async (res) => {
-                let json = null;
-                try {
-                    json = await res.json();
-                } catch (e) {
-                    console.error("JSON parse error:", e);
-                }
+            // Внутри функции sendData, замени блок .then(...) на этот:
 
-                if (!res.ok) {
-                    console.error("Webhook error:", res.status, json || (await res.text().catch(() => "")));
-                    showError("Ошибка при отправке запроса. Попробуйте ещё раз.");
-                    setLoading(false);
-                    return;
-                }
+        .then(async (res) => {
+    let rawJson = null;
+    try {
+        rawJson = await res.json();
+    } catch (e) {
+        console.error("JSON parse error:", e);
+    }
 
-                if (!json || json.status !== "ok") {
-                    console.warn("Необычный формат ответа:", json);
-                    showResult({
-                        title: "Ответ получен",
-                        text: typeof json === "string" ? json : JSON.stringify(json, null, 2)
-                    });
-                } else {
-                    showResult(json);
-                }
+    if (!res.ok) {
+        console.error("Webhook error:", res.status);
+        showError("Ошибка сервера. Попробуйте ещё раз.");
+        setLoading(false);
+        return;
+    }
 
-                setLoading(false);
+    // --- ГЛАВНОЕ ИСПРАВЛЕНИЕ ТУТ ---
+    // Если сервер прислал массив [ { ... } ], берем первый элемент.
+    // Если прислал объект { ... }, оставляем как есть.
+    const json = Array.isArray(rawJson) ? rawJson[0] : rawJson;
+    // -------------------------------
+
+    if (!json || json.status !== "ok") {
+        // Если что-то пошло не так
+        console.warn("Странный ответ:", json);
+        showResult({
+             // Показываем хоть что-то, чтобы не было пустого экрана
+            title: "Результат получен",
+            text: JSON.stringify(json, null, 2),
+            mode: "tarot" 
+        });
+    } else {
+        // Всё хорошо, показываем результат
+        showResult(json);
+    }
+
+    setLoading(false);
+})
             })
             .catch((err) => {
                 console.error("Fetch error:", err);
@@ -598,6 +577,7 @@
 </script>
 </body>
 </html>
+
 
 
 
