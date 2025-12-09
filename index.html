@@ -392,30 +392,31 @@
 
     const mode = payload.mode || null;
 
-    // --- ТАРО ---
+    // --- РЕЖИМ ТАРО ---
     if (mode === "tarot") {
-        const cardName = payload.card_name || payload.title || "Карта Таро";
+        const cardName   = payload.card_name || payload.title || "Карта Таро";
         const isReversed = !!payload.card_reversed;
 
-        // Заголовок: "Рыцарь Мечей (перевёрнутая)" или просто "Рыцарь Мечей"
+        // Заголовок по центру (жирный) — можно брать либо из LLM, либо просто из cardName
+        // Я бы здесь использовал cardName, а LLM-текст оставлял в body
         const titleText = isReversed
             ? `${cardName} (перевёрнутая)`
             : cardName;
 
         resultTitle.textContent = titleText;
 
-        // Подзаголовок – фиксированный текст
-        resultSubtitle.textContent = "Ответ Таро на ваш вопрос";
-        resultSubtitle.style.display = "block";
+        // ВАЖНО: сабтайтл у таро вообще не показываем
+        resultSubtitle.textContent = "";
+        resultSubtitle.style.display = "none";
 
-        // Числа нумерологии нам тут не нужны
+        // Числа нумерологии не нужны
         resultNumbers.textContent = "";
         resultNumbers.style.display = "none";
 
-        // Картинка карты
+        // Картинка + подпись под ней
         if (payload.card_image_url) {
             tarotImage.src = payload.card_image_url;
-            tarotCardName.textContent = cardName; // подпись без "(перевёрнутая)"
+            tarotCardName.textContent = cardName;
             tarotCard.style.display = "flex";
         } else {
             tarotCard.style.display = "none";
@@ -427,9 +428,8 @@
         resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
     }
 
-    // --- НУМЕРОЛОГИЯ ---
+    // --- РЕЖИМ НУМЕРОЛОГИИ --- (как у тебя было)
     else {
-        // Заголовок, как раньше
         resultTitle.textContent = payload.title || "Ваш результат готов ✨";
 
         if (payload.subtitle) {
@@ -440,7 +440,6 @@
             resultSubtitle.style.display = "none";
         }
 
-        // Показываем числа, если есть
         const parts = [];
         if (payload.life_path_number != null) {
             parts.push(`Число жизненного пути: ${payload.life_path_number}`);
@@ -459,7 +458,6 @@
             resultNumbers.style.display = "none";
         }
 
-        // Для нумерологии карту не показываем
         tarotCard.style.display = "none";
         tarotImage.src = "";
         tarotCardName.textContent = "";
@@ -467,7 +465,6 @@
         resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
     }
 
-    // Плавное появление карточки
     resultCard.style.display = "block";
     requestAnimationFrame(() => resultCard.classList.add("visible"));
 }
@@ -576,5 +573,6 @@
 </script>
 </body>
 </html>
+
 
 
