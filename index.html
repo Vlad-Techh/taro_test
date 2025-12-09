@@ -404,46 +404,50 @@
 
         // === РЕЖИМ ТАРО ===
         if (mode === "tarot") {
-            // Базовое имя карты (например, "Умеренность")
-            let baseName = payload.card_name || payload.title || "Карта Таро";
-            
-            // ОЧИСТКА: Если в названии уже пришло слово "перевёрнутая", убираем его, чтобы не дублировать
-            baseName = baseName.replace(/\(перевёрнутая\)/gi, "").trim();
+    // 1) Берём готовый заголовок с бэка
+    const titleFromBackend = payload.card_title || payload.title || "Карта Таро";
 
-            // ПРОВЕРКА ПЕРЕВОРОТА: Поддерживает true, "true", 1
-            const isReversed = payload.card_reversed === true || payload.card_reversed === "true" || payload.card_reversed === 1;
+    // card_reversed может прийти как boolean или как строка, подстрахуемся
+    const isReversed =
+        payload.card_reversed === true ||
+        payload.card_reversed === "true";
 
-            // ФОРМИРУЕМ ФИНАЛЬНОЕ ИМЯ
-            const fullName = isReversed ? `${baseName} (перевёрнутая)` : baseName;
+    // Заголовок сверху по центру
+    resultTitle.textContent = titleFromBackend;
+    resultTitle.style.textAlign = "center";
 
-            // 1. Ставим заголовок сверху
-            resultTitle.textContent = fullName;
+    // Сабтайтл для Таро не нужен
+    resultSubtitle.textContent = "";
+    resultSubtitle.style.display = "none";
 
-            // 2. Скрываем лишнее
-            resultSubtitle.style.display = "none";
-            resultNumbers.style.display = "none";
+    // Нумерологические числа в режиме Таро не показываем
+    resultNumbers.textContent = "";
+    resultNumbers.style.display = "none";
 
-            // 3. Настраиваем картинку
-            if (payload.card_image_url) {
-                tarotImage.src = payload.card_image_url;
-                
-                // Ставим подпись снизу (идентичную заголовку)
-                tarotCardName.textContent = fullName;
+    // 2) Картинка и подпись под ней
+    if (payload.card_image_url) {
+        tarotCard.style.display = "flex";
+        tarotImage.src = payload.card_image_url;
 
-                // КРУТИМ КАРТУ
-                if (isReversed) {
-                    tarotImage.classList.add("reversed");
-                } else {
-                    tarotImage.classList.remove("reversed");
-                }
-                
-                tarotCard.style.display = "flex";
-            } else {
-                tarotCard.style.display = "none";
-            }
+        // подпись под картой — ТО ЖЕ САМОЕ, что заголовок
+        tarotCardName.textContent = titleFromBackend;
 
-            resultText.textContent = payload.text || "";
-        } 
+        // ❗ ПРОСТОЙ ПОВОРОТ БЕЗ КЛАССОВ
+        if (isReversed) {
+            tarotImage.style.transform = "rotate(180deg)";
+        } else {
+            tarotImage.style.transform = "none";
+        }
+    } else {
+        tarotCard.style.display = "none";
+        tarotImage.src = "";
+        tarotCardName.textContent = "";
+        tarotImage.style.transform = "none";
+    }
+
+    // 3) Текст трактовки
+    resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
+}
         
         // === РЕЖИМ НУМЕРОЛОГИИ ===
         else {
@@ -580,6 +584,7 @@
 </script>
 </body>
 </html>
+
 
 
 
