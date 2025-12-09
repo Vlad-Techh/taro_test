@@ -392,70 +392,108 @@
     }
 
     function showResult(payload) {
-    console.log("Clean payload:", payload); // Для проверки в консоли
+    console.log("Payload from backend:", payload);
 
-    const mode = payload.mode || "numerology";
-    const isTarot = mode === "tarot";
+    const mode = payload.mode || null;
 
-    if (isTarot) {
-        // 1. Определяем базовое имя карты
-        const baseName = payload.card_name || "Карта Таро";
-        
-        // 2. Читаем флаг переворота (теперь он точно прочитается верно)
-        const isReversed = !!payload.card_reversed;
+    // --- РЕЖИМ ТАРО ---
+    if (mode === "tarot") {
+        // 1) Берём то, что прислал бэкенд как title / card_name
+        const rawTitle = payload.title || payload.card_name || "Карта Таро";
+        const textBody = payload.text || "";
 
-        // 3. Формируем единую строку для Верха и Низа
-        // Если в названии уже есть слово "перевёрнутая", не дублируем его
-        const suffix = " (перевёрнутая)";
-        let fullName = baseName;
-        
-        if (isReversed && !baseName.toLowerCase().includes("перевёрн")) {
-            fullName = baseName + suffix;
-        }
+        // 2) Определяем, перевёрнутая ли карта, по тексту
+        //    Если в заголовке или тексте есть слово "перевёрнут"
+        const isReversed =
+            /\(перевёрнут/i.test(rawTitle) ||
+            /\bперевёрнут/i.test(textBody);
 
-        // --- НАСТРАИВАЕМ ИНТЕРФЕЙС ---
-        
-        // Верхний заголовок
+        // 3) Базовое название карты без скобок "(перевёрнутая)"
+        const baseName = rawTitle.replace(/\s*\(перевёрнутая\)/i, "").trim();
+
+        // 4) Полное имя, которое мы хотим показывать везде
+        const fullName = isReversed
+            ? `${baseName} (перевёрнутая)`
+            : baseName;
+
+        // Заголовок по центру над картой
         resultTitle.textContent = fullName;
-        
-        // Прячем лишнее от нумерологии
+        resultTitle.style.textAlign = "center";
+
+        // Сабтайтл в таро не нужен
+        resultSubtitle.textContent = "";
         resultSubtitle.style.display = "none";
+
+        // Нумерологические числа в режиме таро не показываем
+        resultNumbers.textContent = "";
         resultNumbers.style.display = "none";
 
-        // Картинка и подпись снизу
+        // Картинка и подпись под картой
         if (payload.card_image_url) {
             tarotImage.src = payload.card_image_url;
-            
-            // Подпись снизу (СТРОГО та же переменная fullName)
+
+            // подпись под картой — ТО ЖЕ САМОЕ, что и заголовок
             tarotCardName.textContent = fullName;
 
-            // Вращение картинки
+            // визуальный переворот карты
             if (isReversed) {
                 tarotImage.classList.add("reversed");
             } else {
                 tarotImage.classList.remove("reversed");
             }
+
             tarotCard.style.display = "flex";
         } else {
             tarotCard.style.display = "none";
+            tarotImage.src = "";
+            tarotCardName.textContent = "";
+            tarotImage.classList.remove("reversed");
         }
 
-        resultText.textContent = payload.text || "";
-    } 
-    
-    // --- РЕЖИМ НУМЕРОЛОГИИ (оставляем как было) ---
-    else {
-        resultTitle.textContent = payload.title || "Ваш результат";
-        resultSubtitle.textContent = payload.subtitle || "";
-        resultSubtitle.style.display = payload.subtitle ? "block" : "none";
-        
-        // ... (код отображения чисел нумерологии пропущен для краткости, он у тебя рабочий)
-        
-        tarotCard.style.display = "none";
-        resultText.textContent = payload.text || "";
+        // Текст трактовки
+        resultText.textContent = textBody || "Ответ получен, но сервер не прислал текст.";
     }
 
-    // Показываем карточку
+    // --- РЕЖИМ НУМЕРОЛОГИИ ---
+    else {
+        resultTitle.textContent = payload.title || "Ваш результат готов ✨";
+
+        if (payload.subtitle) {
+            resultSubtitle.textContent = payload.subtitle;
+            resultSubtitle.style.display = "block";
+        } else {
+            resultSubtitle.textContent = "";
+            resultSubtitle.style.display = "none";
+        }
+
+        const parts = [];
+        if (payload.life_path_number != null) {
+            parts.push(`Число жизненного пути: ${payload.life_path_number}`);
+        }
+        if (payload.birthday_number != null) {
+            parts.push(`Число дня рождения: ${payload.birthday_number}`);
+        }
+        if (payload.personal_year != null) {
+            parts.push(`Число персонального года: ${payload.personal_year}`);
+        }
+        if (parts.length) {
+            resultNumbers.textContent = parts.join(" • ");
+            resultNumbers.style.display = "block";
+        } else {
+            resultNumbers.textContent = "";
+            resultNumbers.style.display = "none";
+        }
+
+        // Для нумерологии карту не показываем
+        tarotCard.style.display = "none";
+        tarotImage.src = "";
+        tarotCardName.textContent = "";
+        tarotImage.classList.remove("reversed");
+
+        resultText.textContent = payload.text || "Ответ получен, но сервер не прислал текст.";
+    }
+
+    // Показываем карточку результата
     resultCard.style.display = "block";
     requestAnimationFrame(() => resultCard.classList.add("visible"));
 }
@@ -577,6 +615,7 @@
 </script>
 </body>
 </html>
+
 
 
 
